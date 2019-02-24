@@ -51,15 +51,15 @@ class HumidityController
 		// Get the IP address of the message manager
 		/////////////////////////////////////////////////////////////////////////////////
 
- 		if ( args.length == 0 )
- 		{
-            // message manager is on the local system
+		if ( args.length == 0 )
+		{
+			// message manager is on the local system
+			em = newEM(MsgMgrIP);
+		} else {
+			// message manager is not on the local system
+			MsgMgrIP = args[0];
             em = newEM(MsgMgrIP);
-        } else {
-            // message manager is not on the local system
-            MsgMgrIP = args[0];
-            em = newEM(MsgMgrIP);
-        } // if
+		} // if
 
 		// Here we check to see if registration worked. If em is null then the
 		// message manager interface was not properly created.
@@ -106,23 +106,21 @@ class HumidityController
 
 			while ( !Done )
 			{
-                try
-                {
-                    eq = em.GetMessageQueue();
-
-                } // try
-                catch( Exception e )
-                {
-                    mw.WriteMessage("Error getting message queue::" + e );
-                    try
-                    {
-                        Thread.sleep(ReconnectToMMDelay);
-                    } catch (Exception sleepException) {
-                        System.out.println( "Sleep error:: " + sleepException );
-                    }
-                    em = newEM(MsgMgrIP);
-
-                } // catch
+				try
+				{
+					eq = em.GetMessageQueue();
+				} // try
+				catch( Exception e )
+				{
+					mw.WriteMessage("Error getting message queue::" + e );
+					try
+					{
+						Thread.sleep(ReconnectToMMDelay);
+					} catch (Exception sleepException) {
+						System.out.println( "Sleep error:: " + sleepException );
+					}
+					em = newEM(MsgMgrIP);
+				} // catch
 
 				// If there are messages in the queue, we read through them.
 				// We are looking for MessageIDs = 4, this is a request to turn the

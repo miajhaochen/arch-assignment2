@@ -4,7 +4,7 @@
 * Project: Assignment A2
 * Copyright: Copyright (c) 2009 Carnegie Mellon University
 * Versions:
-*   1.0 March 2009 - Initial rewrite of original assignment 2 (ajl).
+*	1.0 March 2009 - Initial rewrite of original assignment 2 (ajl).
 *
 * Description:
 *
@@ -16,10 +16,10 @@
 * on the local machine.
 *
 * Internal Methods:
-*   static private void Heater(MessageManagerInterface ei, boolean ON )
-*   static private void Chiller(MessageManagerInterface ei, boolean ON )
-*   static private void Humidifier(MessageManagerInterface ei, boolean ON )
-*   static private void Dehumidifier(MessageManagerInterface ei, boolean ON )
+*	static private void Heater(MessageManagerInterface ei, boolean ON )
+*	static private void Chiller(MessageManagerInterface ei, boolean ON )
+*	static private void Humidifier(MessageManagerInterface ei, boolean ON )
+*	static private void Dehumidifier(MessageManagerInterface ei, boolean ON )
 *
 ******************************************************************************************************************/
 import InstrumentationPackage.*;
@@ -29,581 +29,583 @@ import java.rmi.*;
 
 class ECSMonitor extends Thread
 {
-    private String DEFAULTPORT = "1099";			// Default message manager port
-    private MessageManagerInterface em = null;  // Interface object to the message manager
-    private String MsgMgrIP = null;             // Message Manager IP address
-    private float TempRangeHigh = 100;          // These parameters signify the temperature and humidity ranges in terms
-    private float TempRangeLow = 0;             // of high value and low values. The ECSmonitor will attempt to maintain
-    private float HumiRangeHigh = 100;          // this temperature and humidity. Temperatures are in degrees Fahrenheit
-    private float HumiRangeLow = 0;             // and humidity is in relative humidity percentage.
-    boolean Registered = true;                  // Signifies that this class is registered with an message manager.
-    MessageWindow mw = null;                    // This is the message window
-    Indicator ti;                               // Temperature indicator
-    Indicator hi;                               // Humidity indicator
-
-    public ECSMonitor()
-    {
-        // message manager is on the local system
-        newEM();
-    } //Constructor
-
-    public ECSMonitor( String MsgIpAddress )
-    {
-        // message manager is not on the local system
-        MsgMgrIP = MsgIpAddress;
-        newEM();
-    } // Constructor
-
-    //////////////////// REMARK: restart message manager
-    public void newEM()
-    {
-        try
-        {
-            // Here we create an message manager interface object. This assumes
-            // that the message manager is NOT on the local machine
-            if (MsgMgrIP == null) {
-                em = new MessageManagerInterface();
-            } else {
-                em = new MessageManagerInterface( MsgMgrIP );
-            }
-        }
-
-        catch (Exception e)
-        {
-            System.out.println("ECSMonitor::Error instantiating message manager interface: " + e);
-            Registered = false;
-
-        } // catch
-    }
-
-    public void restartMessageManager() {
-        mw.WriteMessage("restarting message manager ....");
-        ProcessBuilder pb = new ProcessBuilder("./MMStart.sh");
-        try {
-            Process p = pb.start();
-            Thread.sleep(6000);
-            newEM();
-        } catch (Exception e) {
-            mw.WriteMessage("Error restarting message manager::" + e);
-        }
-    }
-
-    public boolean accessMessageManager() throws Exception {
-        System.out.println("Accessing message manager ...");
-        String name;
-        if (MsgMgrIP == null) {
-            name = "MessageManager";
-        } else {
-            name = "//" + MsgMgrIP + ":" + DEFAULTPORT + "/MessageManager";
-        }
-        MessageManager mm = (MessageManager) Naming.lookup(name);
-        return mm.isAlive();
-    }
-    //////////////////// END OF REMARK
-
-    public void run()
-    {
-        Message Msg = null;             // Message object
-        MessageQueue eq = null;         // Message Queue
-        int MsgId = 0;                  // User specified message ID
-        float CurrentTemperature = 0;   // Current temperature as reported by the temperature sensor
-        float CurrentHumidity= 0;       // Current relative humidity as reported by the humidity sensor
-        int Delay = 1000;               // The loop delay (1 second)
-        boolean Done = false;           // Loop termination flag
-        boolean ON = true;              // Used to turn on heaters, chillers, humidifiers, and dehumidifiers
-        boolean OFF = false;            // Used to turn off heaters, chillers, humidifiers, and dehumidifiers
-
-        if (em != null)
-        {
-            // Now we create the ECS status and message panel
-            // Note that we set up two indicators that are initially yellow. This is
-            // because we do not know if the temperature/humidity is high/low.
-            // This panel is placed in the upper left hand corner and the status
-            // indicators are placed directly to the right, one on top of the other
-
-            mw = new MessageWindow("ECS Monitoring Console", 0, 0);
-            ti = new Indicator ("TEMP UNK", mw.GetX()+ mw.Width(), 0);
-            hi = new Indicator ("HUMI UNK", mw.GetX()+ mw.Width(), (int)(mw.Height()/2), 2 );
-
-            mw.WriteMessage( "Registered with the message manager." );
-
-            try
-            {
-                mw.WriteMessage("   Participant id: " + em.GetMyId() );
-                mw.WriteMessage("   Registration Time: " + em.GetRegistrationTime() );
-
-            } // try
+	private String DEFAULTPORT = "1099";		// Default message manager port
+	private MessageManagerInterface em = null;	// Interface object to the message manager
+	private String MsgMgrIP = null;				// Message Manager IP address
+	private float TempRangeHigh = 100;			// These parameters signify the temperature and humidity ranges in terms
+	private float TempRangeLow = 0;				// of high value and low values. The ECSmonitor will attempt to maintain
+	private float HumiRangeHigh = 100;			// this temperature and humidity. Temperatures are in degrees Fahrenheit
+	private float HumiRangeLow = 0;				// and humidity is in relative humidity percentage.
+	boolean Registered = true;					// Signifies that this class is registered with an message manager.
+	MessageWindow mw = null;					// This is the message window
+	Indicator ti;								// Temperature indicator
+	Indicator hi;								// Humidity indicator
+
+	public ECSMonitor()
+	{
+		// message manager is on the local system
+		newEM();
+	} //Constructor
+
+	public ECSMonitor( String MsgIpAddress )
+	{
+		// message manager is not on the local system
+		MsgMgrIP = MsgIpAddress;
+		newEM();
+	} // Constructor
+
+	//////////////////// REMARK: helpers for restarting message manager
+	public void newEM()
+	{
+		try
+		{
+			// Here we create an message manager interface object. This assumes
+			// that the message manager is NOT on the local machine
+			if (MsgMgrIP == null) {
+				em = new MessageManagerInterface();
+			} else {
+				em = new MessageManagerInterface( MsgMgrIP );
+			}
+		}
+
+		catch (Exception e)
+		{
+			System.out.println("ECSMonitor::Error instantiating message manager interface: " + e);
+			Registered = false;
+
+		} // catch
+	}
+
+	public void restartMessageManager() {
+		mw.WriteMessage("restarting message manager ....");
+		ProcessBuilder pb = new ProcessBuilder("./MMStart.sh");
+		try {
+			Process p = pb.start();
+			Thread.sleep(6000);
+			newEM();
+		} catch (Exception e) {
+			mw.WriteMessage("Error restarting message manager::" + e);
+		}
+	}
+
+	public boolean accessMessageManager() throws Exception {
+		System.out.println("Accessing message manager ...");
+		String name;
+		if (MsgMgrIP == null) {
+			name = "MessageManager";
+		} else {
+			name = "//" + MsgMgrIP + ":" + DEFAULTPORT + "/MessageManager";
+		}
+		MessageManager mm = (MessageManager) Naming.lookup(name);
+		return mm.isAlive();
+	}
+	//////////////////// END OF REMARK
+
+	public void run()
+	{
+		Message Msg = null;				// Message object
+		MessageQueue eq = null;			// Message Queue
+		int MsgId = 0;					// User specified message ID
+		float CurrentTemperature = 0;	// Current temperature as reported by the temperature sensor
+		float CurrentHumidity= 0;		// Current relative humidity as reported by the humidity sensor
+		int Delay = 1000;				// The loop delay (1 second)
+		boolean Done = false;			// Loop termination flag
+		boolean ON = true;				// Used to turn on heaters, chillers, humidifiers, and dehumidifiers
+		boolean OFF = false;			// Used to turn off heaters, chillers, humidifiers, and dehumidifiers
+
+		if (em != null)
+		{
+			// Now we create the ECS status and message panel
+			// Note that we set up two indicators that are initially yellow. This is
+			// because we do not know if the temperature/humidity is high/low.
+			// This panel is placed in the upper left hand corner and the status
+			// indicators are placed directly to the right, one on top of the other
+
+			mw = new MessageWindow("ECS Monitoring Console", 0, 0);
+			ti = new Indicator ("TEMP UNK", mw.GetX()+ mw.Width(), 0);
+			hi = new Indicator ("HUMI UNK", mw.GetX()+ mw.Width(), (int)(mw.Height()/2), 2 );
+
+			mw.WriteMessage( "Registered with the message manager." );
+
+			try
+			{
+				mw.WriteMessage("   Participant id: " + em.GetMyId() );
+				mw.WriteMessage("   Registration Time: " + em.GetRegistrationTime() );
 
-            catch (Exception e)
-            {
-                System.out.println("Error:: " + e);
+			} // try
 
-            } // catch
+			catch (Exception e)
+			{
+				System.out.println("Error:: " + e);
 
-            /********************************************************************
-            ** Here we start the main simulation loop
-            *********************************************************************/
+			} // catch
 
-            while ( !Done )
-            {
-                // Here we get our message queue from the message manager
+			/********************************************************************
+			** Here we start the main simulation loop
+			*********************************************************************/
 
-                try
-                {
-                    eq = em.GetMessageQueue();
-                } // try
-                catch( Exception e )
-                {
-                    mw.WriteMessage("Error getting message queue::" + e );
-                    //// only when the message manager is unaccessible, we restart message manager
-                    try {
-                        accessMessageManager();
-                    } catch(Exception accessException) {
-                        System.out.println("Error: MessageManager unavailable. Restarting it.");
-                        //////////////////// REMARK: restart message manager
-                        restartMessageManager();
-                        //////////////////// END OF REMARK
-                    }
-                } // catch
+			while ( !Done )
+			{
+				// Here we get our message queue from the message manager
 
-                // If there are messages in the queue, we read through them.
-                // We are looking for MessageIDs = 1 or 2. Message IDs of 1 are temperature
-                // readings from the temperature sensor; message IDs of 2 are humidity sensor
-                // readings. Note that we get all the messages at once... there is a 1
-                // second delay between samples,.. so the assumption is that there should
-                // only be a message at most. If there are more, it is the last message
-                // that will effect the status of the temperature and humidity controllers
-                // as it would in reality.
+				try
+				{
+					eq = em.GetMessageQueue();
 
-                int qlen = eq.GetSize();
+				} // try
 
-                for ( int i = 0; i < qlen; i++ )
-                {
-                    Msg = eq.GetMessage();
+				catch( Exception e )
+				{
+					mw.WriteMessage("Error getting message queue::" + e );
+					//// only when the message manager is unaccessible, we restart message manager
+					try {
+						accessMessageManager();
+					} catch(Exception accessException) {
+						System.out.println("Error: MessageManager unavailable. Restarting it.");
+						//////////////////// REMARK: restart message manager
+						restartMessageManager();
+						//////////////////// END OF REMARK
+					}
+				} // catch
 
-                    if ( Msg.GetMessageId() == 1 ) // Temperature reading
-                    {
-                        try
-                        {
-                            CurrentTemperature = Float.valueOf(Msg.GetMessage()).floatValue();
+				// If there are messages in the queue, we read through them.
+				// We are looking for MessageIDs = 1 or 2. Message IDs of 1 are temperature
+				// readings from the temperature sensor; message IDs of 2 are humidity sensor
+				// readings. Note that we get all the messages at once... there is a 1
+				// second delay between samples,.. so the assumption is that there should
+				// only be a message at most. If there are more, it is the last message
+				// that will effect the status of the temperature and humidity controllers
+				// as it would in reality.
 
-                        } // try
+				int qlen = eq.GetSize();
 
-                        catch( Exception e )
-                        {
-                            mw.WriteMessage("Error reading temperature: " + e);
+				for ( int i = 0; i < qlen; i++ )
+				{
+					Msg = eq.GetMessage();
 
-                        } // catch
+					if ( Msg.GetMessageId() == 1 ) // Temperature reading
+					{
+						try
+						{
+							CurrentTemperature = Float.valueOf(Msg.GetMessage()).floatValue();
 
-                    } // if
+						} // try
 
-                    if ( Msg.GetMessageId() == 2 ) // Humidity reading
-                    {
-                        try
-                        {
+						catch( Exception e )
+						{
+							mw.WriteMessage("Error reading temperature: " + e);
 
-                            CurrentHumidity = Float.valueOf(Msg.GetMessage()).floatValue();
+						} // catch
 
-                        } // try
+					} // if
 
-                        catch( Exception e )
-                        {
-                            mw.WriteMessage("Error reading humidity: " + e);
+					if ( Msg.GetMessageId() == 2 ) // Humidity reading
+					{
+						try
+						{
 
-                        } // catch
+							CurrentHumidity = Float.valueOf(Msg.GetMessage()).floatValue();
 
-                    } // if
+						} // try
 
-                    // If the message ID == 99 then this is a signal that the simulation
-                    // is to end. At this point, the loop termination flag is set to
-                    // true and this process unregisters from the message manager.
+						catch( Exception e )
+						{
+							mw.WriteMessage("Error reading humidity: " + e);
 
-                    if ( Msg.GetMessageId() == 99 )
-                    {
-                        Done = true;
+						} // catch
 
-                        try
-                        {
-                            em.UnRegister();
+					} // if
 
-                        } // try
+					// If the message ID == 99 then this is a signal that the simulation
+					// is to end. At this point, the loop termination flag is set to
+					// true and this process unregisters from the message manager.
 
-                        catch (Exception e)
-                        {
-                            mw.WriteMessage("Error unregistering: " + e);
+					if ( Msg.GetMessageId() == 99 )
+					{
+						Done = true;
 
-                        } // catch
+						try
+						{
+							em.UnRegister();
 
-                        mw.WriteMessage( "\n\nSimulation Stopped. \n");
+				    	} // try
 
-                        // Get rid of the indicators. The message panel is left for the
-                        // user to exit so they can see the last message posted.
+				    	catch (Exception e)
+				    	{
+							mw.WriteMessage("Error unregistering: " + e);
 
-                        hi.dispose();
-                        ti.dispose();
+				    	} // catch
 
-                    } // if
+				    	mw.WriteMessage( "\n\nSimulation Stopped. \n");
 
-                } // for
+						// Get rid of the indicators. The message panel is left for the
+						// user to exit so they can see the last message posted.
 
-                mw.WriteMessage("Temperature:: " + CurrentTemperature + "F  Humidity:: " + CurrentHumidity );
+						hi.dispose();
+						ti.dispose();
 
-                // Check temperature and effect control as necessary
+					} // if
 
-                if (CurrentTemperature < TempRangeLow) // temperature is below threshhold
-                {
-                    ti.SetLampColorAndMessage("TEMP LOW", 3);
-                    Heater(ON);
-                    Chiller(OFF);
+				} // for
 
-                } else {
+				mw.WriteMessage("Temperature:: " + CurrentTemperature + "F  Humidity:: " + CurrentHumidity );
 
-                    if (CurrentTemperature > TempRangeHigh) // temperature is above threshhold
-                    {
-                        ti.SetLampColorAndMessage("TEMP HIGH", 3);
-                        Heater(OFF);
-                        Chiller(ON);
+				// Check temperature and effect control as necessary
 
-                    } else {
+				if (CurrentTemperature < TempRangeLow) // temperature is below threshhold
+				{
+					ti.SetLampColorAndMessage("TEMP LOW", 3);
+					Heater(ON);
+					Chiller(OFF);
 
-                        ti.SetLampColorAndMessage("TEMP OK", 1); // temperature is within threshhold
-                        Heater(OFF);
-                        Chiller(OFF);
+				} else {
 
-                    } // if
-                } // if
+					if (CurrentTemperature > TempRangeHigh) // temperature is above threshhold
+					{
+						ti.SetLampColorAndMessage("TEMP HIGH", 3);
+						Heater(OFF);
+						Chiller(ON);
 
-                // Check humidity and effect control as necessary
+					} else {
 
-                if (CurrentHumidity < HumiRangeLow)
-                {
-                    hi.SetLampColorAndMessage("HUMI LOW", 3); // humidity is below threshhold
-                    Humidifier(ON);
-                    Dehumidifier(OFF);
+						ti.SetLampColorAndMessage("TEMP OK", 1); // temperature is within threshhold
+						Heater(OFF);
+						Chiller(OFF);
 
-                } else {
+					} // if
+				} // if
 
-                    if (CurrentHumidity > HumiRangeHigh) // humidity is above threshhold
-                    {
-                        hi.SetLampColorAndMessage("HUMI HIGH", 3);
-                        Humidifier(OFF);
-                        Dehumidifier(ON);
+				// Check humidity and effect control as necessary
 
-                    } else {
+				if (CurrentHumidity < HumiRangeLow)
+				{
+					hi.SetLampColorAndMessage("HUMI LOW", 3); // humidity is below threshhold
+					Humidifier(ON);
+					Dehumidifier(OFF);
 
-                        hi.SetLampColorAndMessage("HUMI OK", 1); // humidity is within threshhold
-                        Humidifier(OFF);
-                        Dehumidifier(OFF);
+				} else {
 
-                    } // if
+					if (CurrentHumidity > HumiRangeHigh) // humidity is above threshhold
+					{
+						hi.SetLampColorAndMessage("HUMI HIGH", 3);
+						Humidifier(OFF);
+						Dehumidifier(ON);
 
-                } // if
+					} else {
 
-                // This delay slows down the sample rate to Delay milliseconds
+						hi.SetLampColorAndMessage("HUMI OK", 1); // humidity is within threshhold
+						Humidifier(OFF);
+						Dehumidifier(OFF);
 
-                try
-                {
-                    Thread.sleep( Delay );
+					} // if
 
-                } // try
+				} // if
 
-                catch( Exception e )
-                {
-                    System.out.println( "Sleep error:: " + e );
+				// This delay slows down the sample rate to Delay milliseconds
 
-                } // catch
+				try
+				{
+					Thread.sleep( Delay );
 
-            } // while
+				} // try
 
-        } else {
+				catch( Exception e )
+				{
+					System.out.println( "Sleep error:: " + e );
 
-            System.out.println("Unable to register with the message manager.\n\n" );
+				} // catch
 
-        } // if
+			} // while
 
-    } // main
+		} else {
 
-    /***************************************************************************
-    * CONCRETE METHOD:: IsRegistered
-    * Purpose: This method returns the registered status
-    *
-    * Arguments: none
-    *
-    * Returns: boolean true if registered, false if not registered
-    *
-    * Exceptions: None
-    *
-    ***************************************************************************/
+			System.out.println("Unable to register with the message manager.\n\n" );
 
-    public boolean IsRegistered()
-    {
-        return( Registered );
+		} // if
 
-    } // IsRegistered
+	} // main
 
-    /***************************************************************************
-    * CONCRETE METHOD:: SetTemperatureRange
-    * Purpose: This method sets the temperature range
-    *
-    * Arguments: float lowtemp - low temperature range
-    *            float hightemp - high temperature range
-    *
-    * Returns: none
-    *
-    * Exceptions: None
-    *
-    ***************************************************************************/
+	/***************************************************************************
+	* CONCRETE METHOD:: IsRegistered
+	* Purpose: This method returns the registered status
+	*
+	* Arguments: none
+	*
+	* Returns: boolean true if registered, false if not registered
+	*
+	* Exceptions: None
+	*
+	***************************************************************************/
 
-    public void SetTemperatureRange(float lowtemp, float hightemp )
-    {
-        TempRangeHigh = hightemp;
-        TempRangeLow = lowtemp;
-        mw.WriteMessage( "***Temperature range changed to::" + TempRangeLow + "F - " + TempRangeHigh +"F***" );
+	public boolean IsRegistered()
+	{
+		return( Registered );
 
-    } // SetTemperatureRange
+	} // IsRegistered
 
-    /***************************************************************************
-    * CONCRETE METHOD:: SetHumidityRange
-    * Purpose: This method sets the humidity range
-    *
-    * Arguments: float lowhimi - low humidity range
-    *            float highhumi - high humidity range
-    *
-    * Returns: none
-    *
-    * Exceptions: None
-    *
-    ***************************************************************************/
+	/***************************************************************************
+	* CONCRETE METHOD:: SetTemperatureRange
+	* Purpose: This method sets the temperature range
+	*
+	* Arguments: float lowtemp - low temperature range
+	*			 float hightemp - high temperature range
+	*
+	* Returns: none
+	*
+	* Exceptions: None
+	*
+	***************************************************************************/
 
-    public void SetHumidityRange(float lowhumi, float highhumi )
-    {
-        HumiRangeHigh = highhumi;
-        HumiRangeLow = lowhumi;
-        mw.WriteMessage( "***Humidity range changed to::" + HumiRangeLow + "% - " + HumiRangeHigh +"%***" );
+	public void SetTemperatureRange(float lowtemp, float hightemp )
+	{
+		TempRangeHigh = hightemp;
+		TempRangeLow = lowtemp;
+		mw.WriteMessage( "***Temperature range changed to::" + TempRangeLow + "F - " + TempRangeHigh +"F***" );
 
-    } // SetHumidityRange
+	} // SetTemperatureRange
 
-    /***************************************************************************
-    * CONCRETE METHOD:: Halt
-    * Purpose: This method posts an message that stops the environmental control
-    *          system.
-    *
-    * Arguments: none
-    *
-    * Returns: none
-    *
-    * Exceptions: Posting to message manager exception
-    *
-    ***************************************************************************/
+	/***************************************************************************
+	* CONCRETE METHOD:: SetHumidityRange
+	* Purpose: This method sets the humidity range
+	*
+	* Arguments: float lowhimi - low humidity range
+	*			 float highhumi - high humidity range
+	*
+	* Returns: none
+	*
+	* Exceptions: None
+	*
+	***************************************************************************/
 
-    public void Halt()
-    {
-        mw.WriteMessage( "***HALT MESSAGE RECEIVED - SHUTTING DOWN SYSTEM***" );
+	public void SetHumidityRange(float lowhumi, float highhumi )
+	{
+		HumiRangeHigh = highhumi;
+		HumiRangeLow = lowhumi;
+		mw.WriteMessage( "***Humidity range changed to::" + HumiRangeLow + "% - " + HumiRangeHigh +"%***" );
 
-        // Here we create the stop message.
+	} // SetHumidityRange
 
-        Message msg;
+	/***************************************************************************
+	* CONCRETE METHOD:: Halt
+	* Purpose: This method posts an message that stops the environmental control
+	*		   system.
+	*
+	* Arguments: none
+	*
+	* Returns: none
+	*
+	* Exceptions: Posting to message manager exception
+	*
+	***************************************************************************/
 
-        msg = new Message( (int) 99, "XXX" );
+	public void Halt()
+	{
+		mw.WriteMessage( "***HALT MESSAGE RECEIVED - SHUTTING DOWN SYSTEM***" );
 
-        // Here we send the message to the message manager.
+		// Here we create the stop message.
 
-        try
-        {
-            em.SendMessage( msg );
+		Message msg;
 
-        } // try
+		msg = new Message( (int) 99, "XXX" );
 
-        catch (Exception e)
-        {
-            System.out.println("Error sending halt message:: " + e);
+		// Here we send the message to the message manager.
 
-        } // catch
+		try
+		{
+			em.SendMessage( msg );
 
-    } // Halt
+		} // try
 
-    /***************************************************************************
-    * CONCRETE METHOD:: Heater
-    * Purpose: This method posts messages that will signal the temperature
-    *          controller to turn on/off the heater
-    *
-    * Arguments: boolean ON(true)/OFF(false) - indicates whether to turn the
-    *            heater on or off.
-    *
-    * Returns: none
-    *
-    * Exceptions: Posting to message manager exception
-    *
-    ***************************************************************************/
+		catch (Exception e)
+		{
+			System.out.println("Error sending halt message:: " + e);
 
-    private void Heater( boolean ON )
-    {
-        // Here we create the message.
+		} // catch
 
-        Message msg;
+	} // Halt
 
-        if ( ON )
-        {
-            msg = new Message( (int) 5, "H1" );
+	/***************************************************************************
+	* CONCRETE METHOD:: Heater
+	* Purpose: This method posts messages that will signal the temperature
+	*		   controller to turn on/off the heater
+	*
+	* Arguments: boolean ON(true)/OFF(false) - indicates whether to turn the
+	*			 heater on or off.
+	*
+	* Returns: none
+	*
+	* Exceptions: Posting to message manager exception
+	*
+	***************************************************************************/
 
-        } else {
+	private void Heater( boolean ON )
+	{
+		// Here we create the message.
 
-            msg = new Message( (int) 5, "H0" );
+		Message msg;
 
-        } // if
+		if ( ON )
+		{
+			msg = new Message( (int) 5, "H1" );
 
-        // Here we send the message to the message manager.
+		} else {
 
-        try
-        {
-            em.SendMessage( msg );
+			msg = new Message( (int) 5, "H0" );
 
-        } // try
+		} // if
 
-        catch (Exception e)
-        {
-            System.out.println("Error sending heater control message:: " + e);
+		// Here we send the message to the message manager.
 
-        } // catch
+		try
+		{
+			em.SendMessage( msg );
 
-    } // Heater
+		} // try
 
-    /***************************************************************************
-    * CONCRETE METHOD:: Chiller
-    * Purpose: This method posts messages that will signal the temperature
-    *          controller to turn on/off the chiller
-    *
-    * Arguments: boolean ON(true)/OFF(false) - indicates whether to turn the
-    *            chiller on or off.
-    *
-    * Returns: none
-    *
-    * Exceptions: Posting to message manager exception
-    *
-    ***************************************************************************/
+		catch (Exception e)
+		{
+			System.out.println("Error sending heater control message:: " + e);
 
-    private void Chiller( boolean ON )
-    {
-        // Here we create the message.
+		} // catch
 
-        Message msg;
+	} // Heater
 
-        if ( ON )
-        {
-            msg = new Message( (int) 5, "C1" );
+	/***************************************************************************
+	* CONCRETE METHOD:: Chiller
+	* Purpose: This method posts messages that will signal the temperature
+	*		   controller to turn on/off the chiller
+	*
+	* Arguments: boolean ON(true)/OFF(false) - indicates whether to turn the
+	*			 chiller on or off.
+	*
+	* Returns: none
+	*
+	* Exceptions: Posting to message manager exception
+	*
+	***************************************************************************/
 
-        } else {
+	private void Chiller( boolean ON )
+	{
+		// Here we create the message.
 
-            msg = new Message( (int) 5, "C0" );
+		Message msg;
 
-        } // if
+		if ( ON )
+		{
+			msg = new Message( (int) 5, "C1" );
 
-        // Here we send the message to the message manager.
+		} else {
 
-        try
-        {
-            em.SendMessage( msg );
+			msg = new Message( (int) 5, "C0" );
 
-        } // try
+		} // if
 
-        catch (Exception e)
-        {
-            System.out.println("Error sending chiller control message:: " + e);
+		// Here we send the message to the message manager.
 
-        } // catch
+		try
+		{
+			em.SendMessage( msg );
 
-    } // Chiller
+		} // try
 
-    /***************************************************************************
-    * CONCRETE METHOD:: Humidifier
-    * Purpose: This method posts messages that will signal the humidity
-    *          controller to turn on/off the humidifier
-    *
-    * Arguments: boolean ON(true)/OFF(false) - indicates whether to turn the
-    *            humidifier on or off.
-    *
-    * Returns: none
-    *
-    * Exceptions: Posting to message manager exception
-    *
-    ***************************************************************************/
+		catch (Exception e)
+		{
+			System.out.println("Error sending chiller control message:: " + e);
 
-    private void Humidifier( boolean ON )
-    {
-        // Here we create the message.
+		} // catch
 
-        Message msg;
+	} // Chiller
 
-        if ( ON )
-        {
-            msg = new Message( (int) 4, "H1" );
+	/***************************************************************************
+	* CONCRETE METHOD:: Humidifier
+	* Purpose: This method posts messages that will signal the humidity
+	*		   controller to turn on/off the humidifier
+	*
+	* Arguments: boolean ON(true)/OFF(false) - indicates whether to turn the
+	*			 humidifier on or off.
+	*
+	* Returns: none
+	*
+	* Exceptions: Posting to message manager exception
+	*
+	***************************************************************************/
 
-        } else {
+	private void Humidifier( boolean ON )
+	{
+		// Here we create the message.
 
-            msg = new Message( (int) 4, "H0" );
+		Message msg;
 
-        } // if
+		if ( ON )
+		{
+			msg = new Message( (int) 4, "H1" );
 
-        // Here we send the message to the message manager.
+		} else {
 
-        try
-        {
-            em.SendMessage( msg );
+			msg = new Message( (int) 4, "H0" );
 
-        } // try
+		} // if
 
-        catch (Exception e)
-        {
-            System.out.println("Error sending humidifier control message::  " + e);
+		// Here we send the message to the message manager.
 
-        } // catch
+		try
+		{
+			em.SendMessage( msg );
 
-    } // Humidifier
+		} // try
 
-    /***************************************************************************
-    * CONCRETE METHOD:: Deumidifier
-    * Purpose: This method posts messages that will signal the humidity
-    *          controller to turn on/off the dehumidifier
-    *
-    * Arguments: boolean ON(true)/OFF(false) - indicates whether to turn the
-    *            dehumidifier on or off.
-    *
-    * Returns: none
-    *
-    * Exceptions: Posting to message manager exception
-    *
-    ***************************************************************************/
+		catch (Exception e)
+		{
+			System.out.println("Error sending humidifier control message::  " + e);
 
-    private void Dehumidifier( boolean ON )
-    {
-        // Here we create the message.
+		} // catch
 
-        Message msg;
+	} // Humidifier
 
-        if ( ON )
-        {
-            msg = new Message( (int) 4, "D1" );
+	/***************************************************************************
+	* CONCRETE METHOD:: Deumidifier
+	* Purpose: This method posts messages that will signal the humidity
+	*		   controller to turn on/off the dehumidifier
+	*
+	* Arguments: boolean ON(true)/OFF(false) - indicates whether to turn the
+	*			 dehumidifier on or off.
+	*
+	* Returns: none
+	*
+	* Exceptions: Posting to message manager exception
+	*
+	***************************************************************************/
 
-        } else {
+	private void Dehumidifier( boolean ON )
+	{
+		// Here we create the message.
 
-            msg = new Message( (int) 4, "D0" );
+		Message msg;
 
-        } // if
+		if ( ON )
+		{
+			msg = new Message( (int) 4, "D1" );
 
-        // Here we send the message to the message manager.
+		} else {
 
-        try
-        {
-            em.SendMessage( msg );
+			msg = new Message( (int) 4, "D0" );
 
-        } // try
+		} // if
 
-        catch (Exception e)
-        {
-            System.out.println("Error sending dehumidifier control message::  " + e);
+		// Here we send the message to the message manager.
 
-        } // catch
+		try
+		{
+			em.SendMessage( msg );
 
-    } // Dehumidifier
+		} // try
+
+		catch (Exception e)
+		{
+			System.out.println("Error sending dehumidifier control message::  " + e);
+
+		} // catch
+
+	} // Dehumidifier
 
 } // ECSMonitor
