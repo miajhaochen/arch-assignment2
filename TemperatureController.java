@@ -36,7 +36,7 @@ class TemperatureController
 {
 	public static void main(String args[])
 	{
-		String MsgMgrIP;					// Message Manager IP address
+		String MsgMgrIP = null;				// Message Manager IP address
 		Message Msg = null;					// Message object
 		MessageQueue eq = null;				// Message Queue
 		int MsgId = 0;						// User specified message ID
@@ -45,6 +45,7 @@ class TemperatureController
 		boolean ChillerState = false;		// Chiller state: false == off, true == on
 		int	Delay = 2500;					// The loop delay (2.5 seconds)
 		boolean Done = false;				// Loop termination flag
+		int ReconnectToMMDelay = 10000;		// The reconnection to the message manager delay (10 seconds)
 
 		/////////////////////////////////////////////////////////////////////////////////
 		// Get the IP address of the message manager
@@ -52,47 +53,13 @@ class TemperatureController
 
  		if ( args.length == 0 )
  		{
-			// message manager is on the local system
-
-			System.out.println("\n\nAttempting to register on the local machine..." );
-
-			try
-			{
-				// Here we create an message manager interface object. This assumes
-				// that the message manager is on the local machine
-
-				em = new MessageManagerInterface();
-			}
-
-			catch (Exception e)
-			{
-				System.out.println("Error instantiating message manager interface: " + e);
-
-			} // catch
-
-		} else {
-
-			// message manager is not on the local system
-
-			MsgMgrIP = args[0];
-
-			System.out.println("\n\nAttempting to register on the machine:: " + MsgMgrIP );
-
-			try
-			{
-				// Here we create an message manager interface object. This assumes
-				// that the message manager is NOT on the local machine
-
-				em = new MessageManagerInterface( MsgMgrIP );
-			}
-
-			catch (Exception e)
-			{
-				System.out.println("Error instantiating message manager interface: " + e);
-
-			} // catch
-
-		} // if
+            // message manager is on the local system
+            em = newEM(MsgMgrIP);
+        } else {
+            // message manager is not on the local system
+            MsgMgrIP = args[0];
+            em = newEM(MsgMgrIP);
+        } // if
 
 		// Here we check to see if registration worked. If ef is null then the
 		// message manager interface was not properly created.
@@ -149,7 +116,13 @@ class TemperatureController
 				catch( Exception e )
 				{
 					mw.WriteMessage("Error getting message queue::" + e );
-
+					try
+					{
+					    Thread.sleep(ReconnectToMMDelay);
+					} catch (Exception sleepException) {
+					    System.out.println( "Sleep error:: " + sleepException );
+					}
+					em = newEM(MsgMgrIP);
 				} // catch
 
 				// If there are messages in the queue, we read through them.
@@ -296,6 +269,30 @@ class TemperatureController
 		} // if
 
 	} // main
+
+	//////////////////// REMARK: new message manager interface when needed
+	public static MessageManagerInterface newEM(String ip) {
+		System.out.println("\n\nAttempting to register on the local machine..." );
+		MessageManagerInterface em = null;
+		try
+		{
+			// Here we create an message manager interface object. This assumes
+			// that the message manager is on the local machine
+			if (ip == null) {
+				em = new MessageManagerInterface();
+			} else {
+				em = new MessageManagerInterface(ip);
+			}
+		}
+
+		catch (Exception e)
+		{
+			System.out.println("Error instantiating message manager interface: " + e);
+
+		} // catch
+		return em;
+	}
+	//////////////////// END OF REMARK
 
 	/***************************************************************************
 	* CONCRETE METHOD:: ConfirmMessage
