@@ -36,7 +36,7 @@ class HumidityController
 {
 	public static void main(String args[])
 	{
-		String MsgMgrIP;					// Message Manager IP address
+		String MsgMgrIP = null;             // Message Manager IP address
 		Message Msg = null;					// Message object
 		MessageQueue eq = null;				// Message Queue
 		int MsgId = 0;						// User specified message ID
@@ -45,6 +45,7 @@ class HumidityController
 		boolean DehumidifierState = false;	// Dehumidifier state: false == off, true == on
 		int	Delay = 2500;					// The loop delay (2.5 seconds)
 		boolean Done = false;				// Loop termination flag
+		int ReconnectToMMDelay = 10000;		// The reconnection to the message manager delay (10 seconds)
 
 		/////////////////////////////////////////////////////////////////////////////////
 		// Get the IP address of the message manager
@@ -115,7 +116,7 @@ class HumidityController
                     mw.WriteMessage("Error getting message queue::" + e );
                     try
                     {
-                        Thread.sleep(10000);
+                        Thread.sleep(ReconnectToMMDelay);
                     } catch (Exception sleepException) {
                         System.out.println( "Sleep error:: " + sleepException );
                     }
@@ -269,7 +270,7 @@ class HumidityController
 	} // main
 
 
-	//////////////////// REMARK: restart message manager
+	//////////////////// REMARK: new message manager interface when needed
 	public static MessageManagerInterface newEM(String ip) {
 		System.out.println("\n\nAttempting to register on the local machine..." );
 		MessageManagerInterface em = null;
