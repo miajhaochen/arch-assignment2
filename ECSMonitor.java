@@ -320,46 +320,45 @@ class ECSMonitor extends Thread
 
 	} // main
 
+
 	private void sensorHealthCheck() {
-		String sensorWarning = "";
+		StringBuilder sensorWarning = new StringBuilder();
 		// The logic to deal with loss of sensors
 		if (TemperatureUpdatedTime != 0 && System.currentTimeMillis() - TemperatureUpdatedTime > SensorAlertThreshold) {
-			sensorWarning = "[Warning]Lost the temperature sensor!!!";
-
+			sensorWarning.append("[Warning]Lost the temperature sensor!!!\n");
 		}
 
 		if (HumidityUpdatedTime != 0 && System.currentTimeMillis() - HumidityUpdatedTime > SensorAlertThreshold) {
-			sensorWarning = "[Warning]Lost the humidity sensor!!!";
+			sensorWarning.append("[Warning]Lost the humidity sensor!!!\n");
 		}
 
 		if (sensorWarning.length() != 0) {
-			mw.WriteMessage(sensorWarning);
-			writeToFile(sensorWarning);
+			mw.WriteMessage(sensorWarning.toString());
+			writeToFile(sensorWarning.toString());
 		}
 	}
 
 	private void controllerHealthCheck() {
-		String controllerWarning = "";
+		StringBuilder controllerWarning = new StringBuilder();
 		// The logic to deal with loss of controllers
 		if (TemperatureConfirmedTime != 0 && System.currentTimeMillis() - TemperatureConfirmedTime > ControllerAlertThreshold) {
-			controllerWarning = "[Warning]Lost the temperature controller!!!";
+			controllerWarning.append("[Warning]Lost the temperature controller!!!\n");
 		}
 
 		if (HumidityConfirmedTime != 0 && System.currentTimeMillis() - HumidityConfirmedTime > ControllerAlertThreshold) {
-			controllerWarning = "[Warning]Lost the humidity controller!!!";
+			controllerWarning.append("[Warning]Lost the humidity controller!!!\n");
 		}
 		if (controllerWarning.length() != 0) {
-			mw.WriteMessage(controllerWarning);
-			writeToFile(controllerWarning);
+			mw.WriteMessage(controllerWarning.toString());
+			writeToFile(controllerWarning.toString());
 		}
 	}
 
 	/**
-	 * For Inno, write to file.
 	 * @param info
 	 */
 	private void writeToFile(String info) {
-
+		// Log into some files for auditing reasons
 	}
 
 	/***************************************************************************
