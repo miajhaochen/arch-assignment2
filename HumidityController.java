@@ -34,6 +34,8 @@ import java.util.*;
 
 class HumidityController
 {
+	// sensor ID number
+	public static int humiditySensorID = 0;
 	public static void main(String args[])
 	{
 		String MsgMgrIP;					// Message Manager IP address
@@ -50,8 +52,11 @@ class HumidityController
 		// Get the IP address of the message manager
 		/////////////////////////////////////////////////////////////////////////////////
 
- 		if ( args.length == 0 )
+ 		if ( args.length == 1 )
  		{
+			 // set the humidity ID
+			 humiditySensorID = Integer.parseInt(args[0]);
+
 			// message manager is on the local system
 
 			System.out.println("\n\nAttempting to register on the local machine..." );
@@ -72,9 +77,12 @@ class HumidityController
 
 		} else {
 
+			// set the humidity ID
+			humiditySensorID = Integer.parseInt(args[0]);
+
 			// message manager is not on the local system
 
-			MsgMgrIP = args[0];
+			MsgMgrIP = args[1];
 
 			System.out.println("\n\nAttempting to register on the machine:: " + MsgMgrIP );
 
@@ -165,7 +173,7 @@ class HumidityController
 				{
 					Msg = eq.GetMessage();
 
-					if ( Msg.GetMessageId() == 4 )
+					if ( Msg.GetMessageId() == (4 + (40 * humiditySensorID)))
 					{
 						if (Msg.GetMessage().equalsIgnoreCase("H1")) // humidifier on
 						{
@@ -318,6 +326,9 @@ class HumidityController
 		// Here we create the message.
 
 		Message msg = new Message( (int) -4, m );
+		if(humiditySensorID == 1){
+			msg = new Message( (int) -44, m);
+		}
 
 		// Here we send the message to the message manager.
 
