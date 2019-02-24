@@ -80,6 +80,11 @@ public class MessageManager extends UnicastRemoteObject implements RMIMessageMan
 	*
 	****************************************************************************/
 
+	public boolean isAlive() throws RemoteException {
+		System.out.println("Message manager is alive!");
+		return true;
+	}
+
 	synchronized public long Register() throws RemoteException
 	{
 		// Create a new queue and add it to the list of message queues.

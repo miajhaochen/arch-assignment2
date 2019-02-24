@@ -25,9 +25,11 @@
 import InstrumentationPackage.*;
 import MessagePackage.*;
 import java.util.*;
+import java.rmi.*;
 
 class ECSMonitor extends Thread
 {
+    private String DEFAULTPORT = "1099";			// Default message manager port
     private MessageManagerInterface em = null;  // Interface object to the message manager
     private String MsgMgrIP = null;             // Message Manager IP address
     private float TempRangeHigh = 100;          // These parameters signify the temperature and humidity ranges in terms
@@ -85,6 +87,18 @@ class ECSMonitor extends Thread
             mw.WriteMessage("Error restarting message manager::" + e);
         }
     }
+
+    public boolean accessMessageManager() throws Exception {
+        System.out.println("Accessing message manager ...");
+        String name;
+        if (MsgMgrIP == null) {
+            name = "MessageManager";
+        } else {
+            name = "//" + MsgMgrIP + ":" + DEFAULTPORT + "/MessageManager";
+        }
+        MessageManager mm = (MessageManager) Naming.lookup(name);
+        return mm.isAlive();
+    }
     //////////////////// END OF REMARK
 
     public void run()
@@ -141,11 +155,15 @@ class ECSMonitor extends Thread
                 catch( Exception e )
                 {
                     mw.WriteMessage("Error getting message queue::" + e );
-
-                    //////////////////// REMARK: restart message manager
-                    restartMessageManager();
-                    //////////////////// END OF REMARK
-
+                    //// only when the message manager is unaccessible, we restart message manager
+                    try {
+                        accessMessageManager();
+                    } catch(Exception accessException) {
+                        System.out.println("Error: MessageManager unavailable. Restarting it.");
+                        //////////////////// REMARK: restart message manager
+                        restartMessageManager();
+                        //////////////////// END OF REMARK
+                    }
                 } // catch
 
                 // If there are messages in the queue, we read through them.
