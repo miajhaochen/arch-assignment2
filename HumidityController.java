@@ -52,47 +52,13 @@ class HumidityController
 
  		if ( args.length == 0 )
  		{
-			// message manager is on the local system
-
-			System.out.println("\n\nAttempting to register on the local machine..." );
-
-			try
-			{
-				// Here we create an message manager interface object. This assumes
-				// that the message manager is on the local machine
-
-				em = new MessageManagerInterface();
-			}
-
-			catch (Exception e)
-			{
-				System.out.println("Error instantiating message manager interface: " + e);
-
-			} // catch
-
-		} else {
-
-			// message manager is not on the local system
-
-			MsgMgrIP = args[0];
-
-			System.out.println("\n\nAttempting to register on the machine:: " + MsgMgrIP );
-
-			try
-			{
-				// Here we create an message manager interface object. This assumes
-				// that the message manager is NOT on the local machine
-
-				em = new MessageManagerInterface( MsgMgrIP );
-			}
-
-			catch (Exception e)
-			{
-				System.out.println("Error instantiating message manager interface: " + e);
-
-			} // catch
-
-		} // if
+            // message manager is on the local system
+            em = newEM(MsgMgrIP);
+        } else {
+            // message manager is not on the local system
+            MsgMgrIP = args[0];
+            em = newEM(MsgMgrIP);
+        } // if
 
 		// Here we check to see if registration worked. If em is null then the
 		// message manager interface was not properly created.
@@ -139,17 +105,23 @@ class HumidityController
 
 			while ( !Done )
 			{
-				try
-				{
-					eq = em.GetMessageQueue();
+                try
+                {
+                    eq = em.GetMessageQueue();
 
-				} // try
+                } // try
+                catch( Exception e )
+                {
+                    mw.WriteMessage("Error getting message queue::" + e );
+                    try
+                    {
+                        Thread.sleep(10000);
+                    } catch (Exception sleepException) {
+                        System.out.println( "Sleep error:: " + sleepException );
+                    }
+                    em = newEM(MsgMgrIP);
 
-				catch( Exception e )
-				{
-					mw.WriteMessage("Error getting message queue::" + e );
-
-				} // catch
+                } // catch
 
 				// If there are messages in the queue, we read through them.
 				// We are looking for MessageIDs = 4, this is a request to turn the
@@ -295,6 +267,31 @@ class HumidityController
 		} // if
 
 	} // main
+
+
+	//////////////////// REMARK: restart message manager
+	public static MessageManagerInterface newEM(String ip) {
+		System.out.println("\n\nAttempting to register on the local machine..." );
+		MessageManagerInterface em = null;
+		try
+		{
+			// Here we create an message manager interface object. This assumes
+			// that the message manager is on the local machine
+			if (ip == null) {
+				em = new MessageManagerInterface();
+			} else {
+				em = new MessageManagerInterface(ip);
+			}
+		}
+
+		catch (Exception e)
+		{
+			System.out.println("Error instantiating message manager interface: " + e);
+
+		} // catch
+		return em;
+	}
+	//////////////////// END OF REMARK
 
 	/***************************************************************************
 	* CONCRETE METHOD:: ConfirmMessage
