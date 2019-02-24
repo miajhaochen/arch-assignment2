@@ -25,7 +25,6 @@
 import InstrumentationPackage.*;
 import MessagePackage.*;
 import java.util.*;
-// import java.lang.ProcessBuilder;
 
 class ECSMonitor extends Thread
 {
@@ -73,6 +72,18 @@ class ECSMonitor extends Thread
             Registered = false;
 
         } // catch
+    }
+
+    public void restartMessageManager() {
+        mw.WriteMessage("restarting message manager ....");
+        ProcessBuilder pb = new ProcessBuilder("./MMStart.sh");
+        try {
+            Process p = pb.start();
+            Thread.sleep(6000);
+            newEM();
+        } catch (Exception e) {
+            mw.WriteMessage("Error restarting message manager::" + e);
+        }
     }
     //////////////////// END OF REMARK
 
@@ -127,23 +138,14 @@ class ECSMonitor extends Thread
                 {
                     eq = em.GetMessageQueue();
                 } // try
-
                 catch( Exception e )
                 {
                     mw.WriteMessage("Error getting message queue::" + e );
 
                     //////////////////// REMARK: restart message manager
-                    mw.WriteMessage("restarting message manager ....");
-                    ProcessBuilder pb = new ProcessBuilder("./MMStart.sh");
-                    try {
-                        Process p = pb.start();
-                        Thread.sleep(6000);
-                        System.out.println("new message manager .....");
-                        newEM();
-                    } catch (Exception exception) {
-                        mw.WriteMessage("Error restarting message manager::" + e);
-                    }
+                    restartMessageManager();
                     //////////////////// END OF REMARK
+
                 } // catch
 
                 // If there are messages in the queue, we read through them.
