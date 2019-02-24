@@ -24,7 +24,6 @@
 ******************************************************************************************************************/
 import InstrumentationPackage.*;
 import MessagePackage.*;
-import java.util.*;
 
 class ECSMonitor extends Thread
 {
@@ -86,11 +85,17 @@ class ECSMonitor extends Thread
 
 	public void run()
 	{
-		Message Msg = null;				// Message object
-		MessageQueue eq = null;			// Message Queue
-		int MsgId = 0;					// User specified message ID
-		float CurrentTemperature = 0;	// Current temperature as reported by the temperature sensor
-		float CurrentHumidity= 0;		// Current relative humidity as reported by the humidity sensor
+		Message Msg = null;				  // Message object
+		MessageQueue eq = null;			  // Message Queue
+		int MsgId = 0;					  // User specified message ID
+		float CurrentTemperature = 0;	  // Current temperature as reported by the temperature sensor
+		float CurrentHumidity= 0;		  // Current relative humidity as reported by the humidity sensor
+
+		// The timestamp for detection sensor failures
+		long TemperatureUpdatedTime = 0;  // The updated time point for temperature in millisecond
+		long HumidityUpdatedTime = 0;     // The updated time point for humidity in millisecond
+		long AlertThreshold = 10000;      // The threshold in millisecond to trigger an alert (eg. 10s)
+
 		int	Delay = 1000;				// The loop delay (1 second)
 		boolean Done = false;			// Loop termination flag
 		boolean ON = true;				// Used to turn on heaters, chillers, humidifiers, and dehumidifiers
@@ -160,10 +165,10 @@ class ECSMonitor extends Thread
 
 					if ( Msg.GetMessageId() == 1 ) // Temperature reading
 					{
+						TemperatureUpdatedTime = System.currentTimeMillis();
 						try
 						{
 							CurrentTemperature = Float.valueOf(Msg.GetMessage()).floatValue();
-
 						} // try
 
 						catch( Exception e )
@@ -176,6 +181,7 @@ class ECSMonitor extends Thread
 
 					if ( Msg.GetMessageId() == 2 ) // Humidity reading
 					{
+						HumidityUpdatedTime = System.currentTimeMillis();
 						try
 						{
 
@@ -186,7 +192,6 @@ class ECSMonitor extends Thread
 						catch( Exception e )
 						{
 							mw.WriteMessage("Error reading humidity: " + e);
-
 						} // catch
 
 					} // if
@@ -232,7 +237,6 @@ class ECSMonitor extends Thread
 					ti.SetLampColorAndMessage("TEMP LOW", 3);
 					Heater(ON);
 					Chiller(OFF);
-
 				} else {
 
 					if (CurrentTemperature > TempRangeHigh) // temperature is above threshhold
@@ -240,13 +244,10 @@ class ECSMonitor extends Thread
 						ti.SetLampColorAndMessage("TEMP HIGH", 3);
 						Heater(OFF);
 						Chiller(ON);
-
 					} else {
-
 						ti.SetLampColorAndMessage("TEMP OK", 1); // temperature is within threshhold
 						Heater(OFF);
 						Chiller(OFF);
-
 					} // if
 				} // if
 
@@ -290,6 +291,18 @@ class ECSMonitor extends Thread
 
 				} // catch
 
+				if (TemperatureUpdatedTime != 0 && System.currentTimeMillis() - TemperatureUpdatedTime > AlertThreshold) {
+					String tempWarning = "[Warning]We lose the temperature sensor and please check it.";
+					mw.WriteMessage(tempWarning);
+					writeToFile(tempWarning);
+				}
+
+				if (HumidityUpdatedTime != 0 && System.currentTimeMillis() - HumidityUpdatedTime > AlertThreshold) {
+					String humidiWarning = "[Warning]We lose the humidity sensor and please check it.";
+					mw.WriteMessage(humidiWarning);
+					writeToFile(humidiWarning);
+				}
+
 			} // while
 
 		} else {
@@ -299,6 +312,14 @@ class ECSMonitor extends Thread
 		} // if
 
 	} // main
+
+	/**
+	 * For Inno, write to file.
+	 * @param info
+	 */
+	private void writeToFile(String info) {
+
+	}
 
 	/***************************************************************************
 	* CONCRETE METHOD:: IsRegistered
