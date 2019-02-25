@@ -27,6 +27,8 @@ import java.util.*;
 
 class TemperatureSensor
 {
+	static int tempSensorId = 0;				// Sensor and redundancy sensor ID
+
 	public static void main(String args[])
 	{
 		String MsgMgrIP = null;			// Message Manager IP address
@@ -43,16 +45,22 @@ class TemperatureSensor
 		int ReconnectToMMDelay = 10000;		// The reconnection to the message manager delay (10 seconds)
 
 		/////////////////////////////////////////////////////////////////////////////////
-		// Get the IP address of the message manager
+		// Get the sensor ID and IP address of the message manager
 		/////////////////////////////////////////////////////////////////////////////////
 
-		if ( args.length == 0 )
-		{
+ 		if ( args.length == 1 )
+ 		{
 			// message manager is on the local system
+
+			tempSensorId = Integer.parseInt(args[0]);
+
 			em = newEM(MsgMgrIP);
 		} else {
 			// message manager is not on the local system
-			MsgMgrIP = args[0];
+
+			tempSensorId = Integer.parseInt(args[0]);
+			MsgMgrIP = args[1];
+
 			em = newEM(MsgMgrIP);
 		} // if
 
@@ -142,8 +150,9 @@ class TemperatureSensor
 				} // catch
 
 				// If there are messages in the queue, we read through them.
-				// We are looking for MessageIDs = -5, this means the the heater
-				// or chiller has been turned on/off. Note that we get all the messages
+				// We are looking for MessageIDs = -5 and -55, this means the the heater
+				// or chiller has been turned on/off by sensor 1 and sensor 2.
+				// Note that we get all the messages
 				// at once... there is a 2.5 second delay between samples,.. so
 				// the assumption is that there should only be a message at most.
 				// If there are more, it is the last message that will effect the
@@ -155,7 +164,36 @@ class TemperatureSensor
 				{
 					Msg = eq.GetMessage();
 
-					if ( Msg.GetMessageId() == -5 )
+					// if the primary sensor is running
+					if ( tempSensorId == 0 && Msg.GetMessageId() == -5)
+					{
+						if (Msg.GetMessage().equalsIgnoreCase("H1")) // heater on
+						{
+							HeaterState = true;
+
+						} // if
+
+						if (Msg.GetMessage().equalsIgnoreCase("H0")) // heater off
+						{
+							HeaterState = false;
+
+						} // if
+
+						if (Msg.GetMessage().equalsIgnoreCase("C1")) // chiller on
+						{
+							ChillerState = true;
+
+						} // if
+
+						if (Msg.GetMessage().equalsIgnoreCase("C0")) // chiller off
+						{
+							ChillerState = false;
+
+						} // if
+					}
+
+					// if the redundant sensor is running
+					if ( tempSensorId == 1 && Msg.GetMessageId() == -55)
 					{
 						if (Msg.GetMessage().equalsIgnoreCase("H1")) // heater on
 						{
@@ -181,13 +219,13 @@ class TemperatureSensor
 
 						} // if
 
-					} // if
+						} // if
 
 					// If the message ID == 99 then this is a signal that the simulation
 					// is to end. At this point, the loop termination flag is set to
 					// true and this process unregisters from the message manager.
 
-					if ( Msg.GetMessageId() == 99 )
+					else if ( Msg.GetMessageId() == 99)
 					{
 						Done = true;
 
@@ -331,7 +369,7 @@ class TemperatureSensor
 	/***************************************************************************
 	* CONCRETE METHOD:: PostTemperature
 	* Purpose: This method posts the specified temperature value to the
-	* specified message manager. This method assumes an message ID of 1.
+	* specified message manager. This method assumes an message ID of 1 and 11.
 	*
 	* Arguments: MessageManagerInterface ei - this is the messagemanger interface
 	*			 where the message will be posted.
@@ -348,7 +386,13 @@ class TemperatureSensor
 	{
 		// Here we create the message.
 
-		Message msg = new Message( (int) 1, String.valueOf(temperature) );
+		Message msg;
+
+		if (tempSensorId == 0) {
+			 msg = new Message(1, String.valueOf(temperature));
+		} else {
+			 msg = new Message(11, String.valueOf(temperature));
+		}
 
 		// Here we send the message to the message manager.
 

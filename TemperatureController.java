@@ -21,7 +21,7 @@
 * the message window. Once a valid command is recieved a confirmation message is sent with the id of -5 and the command in
 * the command string.
 *
-* Parameters: IP address of the message manager (on command line). If blank, it is assumed that the message manager is
+* Parameters: sensor ID, IP address of the message manager (on command line). If blank, it is assumed that the message manager is
 * on the local machine.
 *
 * Internal Methods:
@@ -34,6 +34,9 @@ import java.util.*;
 
 class TemperatureController
 {
+	// sensor ID number
+	public static int temperatureSensorID = 0;
+
 	public static void main(String args[])
 	{
 		String MsgMgrIP = null;				// Message Manager IP address
@@ -51,13 +54,23 @@ class TemperatureController
 		// Get the IP address of the message manager
 		/////////////////////////////////////////////////////////////////////////////////
 
-		if ( args.length == 0 )
-		{
+ 		if ( args.length == 1 )
+ 		{
+			// set the temperature ID
+			temperatureSensorID = Integer.parseInt(args[0]);
+
+			System.out.println("temperatureSensorID: "  + temperatureSensorID);
+
 			// message manager is on the local system
 			em = newEM(MsgMgrIP);
 		} else {
+			// set the temperature ID
+			temperatureSensorID = Integer.parseInt(args[0]);
+
 			// message manager is not on the local system
-			MsgMgrIP = args[0];
+
+			MsgMgrIP = args[1];
+
 			em = newEM(MsgMgrIP);
 		} // if
 
@@ -139,7 +152,7 @@ class TemperatureController
 				{
 					Msg = eq.GetMessage();
 
-					if ( Msg.GetMessageId() == 5 )
+					if ( Msg.GetMessageId() == (5 + (50 * temperatureSensorID)))
 					{
 						if (Msg.GetMessage().equalsIgnoreCase("H1")) // heater on
 						{
@@ -314,8 +327,12 @@ class TemperatureController
 	static private void ConfirmMessage(MessageManagerInterface ei, String m )
 	{
 		// Here we create the message.
+		// Differentiate between sensors
 
 		Message msg = new Message( (int) -5, m );
+		if(temperatureSensorID == 1){
+			msg = new Message( (int) -55, m);
+		}
 
 		// Here we send the message to the message manager.
 

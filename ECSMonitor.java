@@ -27,6 +27,13 @@ import MessagePackage.*;
 import java.util.*;
 import java.rmi.*;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Hashtable;
+
 class ECSMonitor extends Thread
 {
 	private String DEFAULTPORT = "1099";		// Default message manager port
@@ -40,6 +47,86 @@ class ECSMonitor extends Thread
 	MessageWindow mw = null;					// This is the message window
 	Indicator ti;								// Temperature indicator
 	Indicator hi;								// Humidity indicator
+
+	// The timestamp for detection sensor failures
+	private long TemperatureUpdatedTime = 0;   // The updated time point for temperature in millisecond
+	private long HumidityUpdatedTime = 0;      // The updated time point for humidity in millisecond
+	private long SensorAlertThreshold = 5000; // The sensor threshold in millisecond to trigger an alert (eg. 10s)
+
+	// The timestamp for detection controller failures
+	private long TemperatureConfirmedTime = 0;     // The updated time point for temperature controller in millisecond
+	private long HumidityConfirmedTime = 0;        // The updated time point for humidity controller in millisecond
+	private long ControllerAlertThreshold = 5000; // The controller threshold in millisecond to trigger an alert (eg. 10s)
+
+	private final int RETRIES_THRESHOLD = 3;
+	private enum SC_STATUS {
+		S_TEMP,
+		S_HUMIDITY,
+		C_TEMP,
+		C_HUMIDITY
+	}
+
+	private Hashtable<SC_STATUS, String> display = new Hashtable<SC_STATUS, String>(){
+		{
+			put(SC_STATUS.S_TEMP, "Temperature sensor");
+			put(SC_STATUS.S_HUMIDITY, "Humidity sensor");
+			put(SC_STATUS.C_TEMP, "Temperature controller");
+			put(SC_STATUS.C_HUMIDITY, "Humidity controller");
+		}
+	};
+
+	private Hashtable<SC_STATUS, Integer> retries = new Hashtable<SC_STATUS, Integer>(){
+		{
+			put(SC_STATUS.S_TEMP, 0);
+			put(SC_STATUS.S_HUMIDITY, 0);
+			put(SC_STATUS.C_TEMP, 0);
+			put(SC_STATUS.C_HUMIDITY, 0);
+		}
+	};
+
+	private Hashtable<SC_STATUS, ArrayList<Integer>> nodes = new Hashtable<SC_STATUS, ArrayList<Integer>>(){
+		{
+			{
+				put(SC_STATUS.S_TEMP, new ArrayList<Integer>() {
+					{
+						add(1);
+						add(11);
+					}
+				});
+
+				put(SC_STATUS.S_HUMIDITY, new ArrayList<Integer>() {
+					{
+						add(2);
+						add(22);
+					}
+				});
+
+				put(SC_STATUS.C_TEMP, new ArrayList<Integer>() {
+					{
+						add(5);
+						add(55);
+					}
+				});
+
+				put(SC_STATUS.C_HUMIDITY, new ArrayList<Integer>() {
+					{
+						add(4);
+						add(44);
+					}
+				});
+			}
+		}
+	};
+
+	private Hashtable<SC_STATUS, Integer> defaultCode = new Hashtable<SC_STATUS, Integer>(){
+		{
+			put(SC_STATUS.S_TEMP, 1);
+			put(SC_STATUS.S_HUMIDITY, 2);
+			put(SC_STATUS.C_TEMP, 5);
+			put(SC_STATUS.C_HUMIDITY, 4);
+		}
+	};
+
 
 	public ECSMonitor()
 	{
@@ -161,7 +248,7 @@ class ECSMonitor extends Thread
 					try {
 						accessMessageManager();
 					} catch(Exception accessException) {
-						System.out.println("Error: MessageManager unavailable. Restarting it.");
+						mw.WriteMessage("Error: MessageManager unavailable. Restarting it.");
 						//////////////////// REMARK: restart message manager
 						restartMessageManager();
 						//////////////////// END OF REMARK
@@ -183,12 +270,13 @@ class ECSMonitor extends Thread
 				{
 					Msg = eq.GetMessage();
 
-					if ( Msg.GetMessageId() == 1 ) // Temperature reading
+					if ( Msg.GetMessageId() == defaultCode.get(SC_STATUS.S_TEMP) ) // Temperature reading
 					{
+						retries.put(SC_STATUS.S_TEMP, 0);
+						TemperatureUpdatedTime = System.currentTimeMillis();
 						try
 						{
 							CurrentTemperature = Float.valueOf(Msg.GetMessage()).floatValue();
-
 						} // try
 
 						catch( Exception e )
@@ -199,8 +287,10 @@ class ECSMonitor extends Thread
 
 					} // if
 
-					if ( Msg.GetMessageId() == 2 ) // Humidity reading
+					if ( Msg.GetMessageId() == defaultCode.get(SC_STATUS.S_HUMIDITY) ) // Humidity reading
 					{
+						retries.put(SC_STATUS.S_HUMIDITY, 0);
+						HumidityUpdatedTime = System.currentTimeMillis();
 						try
 						{
 
@@ -211,9 +301,21 @@ class ECSMonitor extends Thread
 						catch( Exception e )
 						{
 							mw.WriteMessage("Error reading humidity: " + e);
-
 						} // catch
 
+					} // if
+
+					if ( Msg.GetMessageId() == getConfirmcode(defaultCode.get(SC_STATUS.C_TEMP)) ) // Temperature controller confirmation
+					{
+						retries.put(SC_STATUS.C_TEMP, 0);
+						TemperatureConfirmedTime = System.currentTimeMillis();
+
+					} // if
+
+					if ( Msg.GetMessageId() == getConfirmcode(defaultCode.get(SC_STATUS.C_HUMIDITY)) ) // Humidifier controller confirmation
+					{
+						retries.put(SC_STATUS.C_HUMIDITY, 0);
+						HumidityConfirmedTime = System.currentTimeMillis();
 					} // if
 
 					// If the message ID == 99 then this is a signal that the simulation
@@ -257,7 +359,6 @@ class ECSMonitor extends Thread
 					ti.SetLampColorAndMessage("TEMP LOW", 3);
 					Heater(ON);
 					Chiller(OFF);
-
 				} else {
 
 					if (CurrentTemperature > TempRangeHigh) // temperature is above threshhold
@@ -265,13 +366,10 @@ class ECSMonitor extends Thread
 						ti.SetLampColorAndMessage("TEMP HIGH", 3);
 						Heater(OFF);
 						Chiller(ON);
-
 					} else {
-
 						ti.SetLampColorAndMessage("TEMP OK", 1); // temperature is within threshhold
 						Heater(OFF);
 						Chiller(OFF);
-
 					} // if
 				} // if
 
@@ -315,15 +413,106 @@ class ECSMonitor extends Thread
 
 				} // catch
 
+				try {
+					sensorHealthCheck();
+					controllerHealthCheck();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+
 			} // while
 
 		} else {
-
 			System.out.println("Unable to register with the message manager.\n\n" );
 
 		} // if
 
 	} // main
+
+	/**
+	 * Get the confirmation code
+	 * @param originCode
+	 * @return
+	 */
+	private int getConfirmcode(int originCode) {
+		return -1 * originCode;
+	}
+
+	private int switchNodeId(int defaultCode, ArrayList<Integer> candidates) {
+		return candidates.get((candidates.indexOf(defaultCode) + 1) % candidates.size());
+	}
+
+	private void retryOrSwitch(SC_STATUS status) {
+		int currentRetries = retries.get(status);
+		if (currentRetries < RETRIES_THRESHOLD)
+			retries.put(status, currentRetries + 1);
+		else {
+			defaultCode.put(status,
+							switchNodeId(defaultCode.get(status),
+							nodes.get(status)));
+			mw.WriteMessage(String.format("[INFO]Switch %s to node %d",
+							display.get(status), defaultCode.get(status)));
+			retries.put(status, 0);
+		}
+	}
+
+
+	private void sensorHealthCheck() throws IOException {
+		StringBuilder sensorWarning = new StringBuilder();
+		// The logic to deal with loss of sensors
+		if (TemperatureUpdatedTime != 0 && System.currentTimeMillis() - TemperatureUpdatedTime > SensorAlertThreshold) {
+			sensorWarning.append("[Warning]Lost the temperature sensor!!!\n");
+			retryOrSwitch(SC_STATUS.S_TEMP);
+		}
+
+		if (HumidityUpdatedTime != 0 && System.currentTimeMillis() - HumidityUpdatedTime > SensorAlertThreshold) {
+			sensorWarning.append("[Warning]Lost the humidity sensor!!!\n");
+			retryOrSwitch(SC_STATUS.S_HUMIDITY);
+		}
+
+		if (sensorWarning.length() != 0) {
+			mw.WriteMessage(sensorWarning.toString());
+			writeToFile(sensorWarning.toString(), true);
+		}
+	}
+
+	private void controllerHealthCheck() throws IOException {
+		StringBuilder controllerWarning = new StringBuilder();
+		// The logic to deal with loss of controllers
+		if (TemperatureConfirmedTime != 0 && System.currentTimeMillis() - TemperatureConfirmedTime > ControllerAlertThreshold) {
+			controllerWarning.append("[Warning]Lost the temperature controller!!!\n");
+			retryOrSwitch(SC_STATUS.C_TEMP);
+		}
+
+		if (HumidityConfirmedTime != 0 && System.currentTimeMillis() - HumidityConfirmedTime > ControllerAlertThreshold) {
+			controllerWarning.append("[Warning]Lost the humidity controller!!!\n");
+			retryOrSwitch(SC_STATUS.C_HUMIDITY);
+		}
+		if (controllerWarning.length() != 0) {
+			mw.WriteMessage(controllerWarning.toString());
+			writeToFile(controllerWarning.toString(), true);
+		}
+	}
+
+	/**
+	 * Create log file to record all the warning messages printed to console.
+	 * @param info
+	 * @param append true to append messages, false to overwrite
+	 */
+	private void writeToFile(String info, boolean append) throws IOException {
+		BufferedWriter log = null;
+		try {
+			File file = new File("log.txt");
+			log = new BufferedWriter(new FileWriter(file, append));
+			log.write(info);
+		} catch ( IOException e ) {
+			e.printStackTrace();
+		} finally {
+			if ( log != null ) {
+				log.close();
+			}
+		}
+	}
 
 	/***************************************************************************
 	* CONCRETE METHOD:: IsRegistered
@@ -446,11 +635,11 @@ class ECSMonitor extends Thread
 
 		if ( ON )
 		{
-			msg = new Message( (int) 5, "H1" );
+			msg = new Message( defaultCode.get(SC_STATUS.C_TEMP), "H1" );
 
 		} else {
 
-			msg = new Message( (int) 5, "H0" );
+			msg = new Message( defaultCode.get(SC_STATUS.C_TEMP), "H0" );
 
 		} // if
 
@@ -492,11 +681,11 @@ class ECSMonitor extends Thread
 
 		if ( ON )
 		{
-			msg = new Message( (int) 5, "C1" );
+			msg = new Message( defaultCode.get(SC_STATUS.C_TEMP), "C1" );
 
 		} else {
 
-			msg = new Message( (int) 5, "C0" );
+			msg = new Message( defaultCode.get(SC_STATUS.C_TEMP), "C0" );
 
 		} // if
 
@@ -538,11 +727,11 @@ class ECSMonitor extends Thread
 
 		if ( ON )
 		{
-			msg = new Message( (int) 4, "H1" );
+			msg = new Message( defaultCode.get(SC_STATUS.C_HUMIDITY), "H1" );
 
 		} else {
 
-			msg = new Message( (int) 4, "H0" );
+			msg = new Message( defaultCode.get(SC_STATUS.C_HUMIDITY), "H0" );
 
 		} // if
 
@@ -584,11 +773,11 @@ class ECSMonitor extends Thread
 
 		if ( ON )
 		{
-			msg = new Message( (int) 4, "D1" );
+			msg = new Message( defaultCode.get(SC_STATUS.C_HUMIDITY), "D1" );
 
 		} else {
 
-			msg = new Message( (int) 4, "D0" );
+			msg = new Message( defaultCode.get(SC_STATUS.C_HUMIDITY), "D0" );
 
 		} // if
 
