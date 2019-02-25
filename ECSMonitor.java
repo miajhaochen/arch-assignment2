@@ -418,6 +418,7 @@ class ECSMonitor extends Thread
 							nodes.get(status)));
 			mw.WriteMessage(String.format("[INFO]Switch %s to node %d",
 							display.get(status), defaultCode.get(status)));
+			retries.put(status, 0);
 		}
 	}
 
@@ -587,11 +588,11 @@ class ECSMonitor extends Thread
 
 		if ( ON )
 		{
-			msg = new Message( (int) 5, "H1" );
+			msg = new Message( defaultCode.get(SC_STATUS.C_TEMP), "H1" );
 
 		} else {
 
-			msg = new Message( (int) 5, "H0" );
+			msg = new Message( defaultCode.get(SC_STATUS.C_TEMP), "H0" );
 
 		} // if
 
@@ -633,11 +634,11 @@ class ECSMonitor extends Thread
 
 		if ( ON )
 		{
-			msg = new Message( (int) 5, "C1" );
+			msg = new Message( defaultCode.get(SC_STATUS.C_TEMP), "C1" );
 
 		} else {
 
-			msg = new Message( (int) 5, "C0" );
+			msg = new Message( defaultCode.get(SC_STATUS.C_TEMP), "C0" );
 
 		} // if
 
@@ -679,11 +680,11 @@ class ECSMonitor extends Thread
 
 		if ( ON )
 		{
-			msg = new Message( (int) 4, "H1" );
+			msg = new Message( defaultCode.get(SC_STATUS.C_HUMIDITY), "H1" );
 
 		} else {
 
-			msg = new Message( (int) 4, "H0" );
+			msg = new Message( defaultCode.get(SC_STATUS.C_HUMIDITY), "H0" );
 
 		} // if
 
@@ -725,11 +726,11 @@ class ECSMonitor extends Thread
 
 		if ( ON )
 		{
-			msg = new Message( (int) 4, "D1" );
+			msg = new Message( defaultCode.get(SC_STATUS.C_HUMIDITY), "D1" );
 
 		} else {
 
-			msg = new Message( (int) 4, "D0" );
+			msg = new Message( defaultCode.get(SC_STATUS.C_HUMIDITY), "D0" );
 
 		} // if
 
