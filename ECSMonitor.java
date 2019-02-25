@@ -168,7 +168,7 @@ class ECSMonitor extends Thread
 		ProcessBuilder pb = new ProcessBuilder("./MMStart.sh");
 		try {
 			Process p = pb.start();
-			Thread.sleep(6000);
+			Thread.sleep(3000);
 			newEM();
 		} catch (Exception e) {
 			mw.WriteMessage("Error restarting message manager::" + e);

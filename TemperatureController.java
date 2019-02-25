@@ -48,7 +48,7 @@ class TemperatureController
 		boolean ChillerState = false;		// Chiller state: false == off, true == on
 		int	Delay = 2500;					// The loop delay (2.5 seconds)
 		boolean Done = false;				// Loop termination flag
-		int ReconnectToMMDelay = 10000;		// The reconnection to the message manager delay (10 seconds)
+		int ReconnectToMMDelay = 3000;		// The reconnection to the message manager delay (10 seconds)
 
 		/////////////////////////////////////////////////////////////////////////////////
 		// Get the IP address of the message manager
