@@ -405,16 +405,17 @@ class ECSMonitor extends Thread
 		return -1 * originCode;
 	}
 
-	private int switchNodeIt(int defaultCode, ArrayList<Integer> candidates) {
+	private int switchNodeId(int defaultCode, ArrayList<Integer> candidates) {
 		return candidates.get((candidates.indexOf(defaultCode) + 1) % candidates.size());
 	}
 
 	private void retryOrSwitch(SC_STATUS status) {
 		int currentRetries = retries.get(status);
-		if (currentRetries < 3)
+		if (currentRetries < RETRIES_THRESHOLD)
 			retries.put(status, currentRetries + 1);
 		else {
-			defaultCode.put(status, switchNodeIt(defaultCode.get(status),
+			defaultCode.put(status,
+							switchNodeId(defaultCode.get(status),
 							nodes.get(status)));
 			mw.WriteMessage(String.format("[INFO]Switch %s to node %d",
 							display.get(status), defaultCode.get(status)));
