@@ -6,9 +6,9 @@ java TemperatureController 0 &
 echo "Starting HumidityController 0"
 java HumidityController 0 &
 echo "Starting TemperatureSensor"
-java TemperatureSensor &
+java TemperatureSensor 0 &
 echo "Starting HumiditySensor"
-java HumiditySensor &
+java HumiditySensor 0 &
 
 # start redundant sensors and controllers
 sleep 5
@@ -17,6 +17,12 @@ java TemperatureController 1 &
 sleep 5
 echo "Starting HumidityController 1"
 java HumidityController 1 &
+sleep
+echo "Starting TemperatureSensor 1"
+java TemperatureSensor 1 &
+sleep 5
+echo "Starting HumiditySensor 1"
+java HumiditySensor 1 &
 
 echo "Starting ECSConsole"
 java ECSConsole

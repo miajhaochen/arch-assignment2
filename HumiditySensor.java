@@ -28,6 +28,8 @@ import java.util.*;
 class HumiditySensor
 {
 
+	public static int humiditySensorId = 0; // Sensor and redundancy sensor ID
+
 	public static void main(String args[])
 	{
 		String MsgMgrIP;					// Message Manager IP address
@@ -48,9 +50,12 @@ class HumiditySensor
 		// Get the IP address of the message manager
 		/////////////////////////////////////////////////////////////////////////////////
 
- 		if ( args.length == 0 )
+ 		if ( args.length == 1 )
  		{
 			// message manager is on the local system
+
+			// get the sensor id from the argument input index 0
+			humiditySensorId = Integer.parseInt(args[0]);
 
 			System.out.println("\n\nAttempting to register on the local machine..." );
 
@@ -72,7 +77,9 @@ class HumiditySensor
 
 			// message manager is not on the local system
 
-			MsgMgrIP = args[0];
+			// get the sensor id from the argument input index 0
+			humiditySensorId = Integer.parseInt(args[0]);
+			MsgMgrIP = args[1];
 
 			System.out.println("\n\nAttempting to register on the machine:: " + MsgMgrIP );
 
@@ -170,8 +177,9 @@ class HumiditySensor
 				} // catch
 
 				// If there are messages in the queue, we read through them.
-				// We are looking for MessageIDs = -4, this means the the humidify or
-				// dehumidifier has been turned on/off. Note that we get all the messages
+				// We are looking for MessageIDs = -4 or 44, this means the the humidify or
+				// dehumidifier has been turned on/off with humiditySensorId of 0 and 1.
+				// Note that we get all the messages
 				// from the queue at once... there is a 2.5 second delay between samples,..
 				// so the assumption is that there should only be a message at most.
 				// If there are more, it is the last message that will effect the
@@ -183,7 +191,35 @@ class HumiditySensor
 				{
 					Msg = eq.GetMessage();
 
-					if ( Msg.GetMessageId() == -4 )
+					if ( humiditySensorId == 0 && Msg.GetMessageId() == -4 )
+					{
+						if (Msg.GetMessage().equalsIgnoreCase("H1")) // humidifier on
+						{
+							HumidifierState = true;
+
+						} // if
+
+						if (Msg.GetMessage().equalsIgnoreCase("H0")) // humidifier off
+						{
+							HumidifierState = false;
+
+						} // if
+
+						if (Msg.GetMessage().equalsIgnoreCase("D1")) // dehumidifier on
+						{
+							DehumidifierState = true;
+
+						} // if
+
+						if (Msg.GetMessage().equalsIgnoreCase("D0")) // dehumidifier off
+						{
+							DehumidifierState = false;
+
+						} // if
+
+					} // if
+
+					else if ( humiditySensorId == 1 && Msg.GetMessageId() == -44 )
 					{
 						if (Msg.GetMessage().equalsIgnoreCase("H1")) // humidifier on
 						{
@@ -335,7 +371,7 @@ class HumiditySensor
 	/***************************************************************************
 	* CONCRETE METHOD:: PostHumidity
 	* Purpose: This method posts the specified relative humidity value to the
-	* specified message manager. This method assumes an message ID of 2.
+	* specified message manager. This method assumes an message ID of 2 or 22.
 	*
 	* Arguments: MessageManagerInterface ei - this is the messagemanger interface
 	*			 where the message will be posted.
@@ -350,9 +386,15 @@ class HumiditySensor
 
 	static private void PostHumidity(MessageManagerInterface ei, float humidity )
 	{
-		// Here we create the message.
+		// Declare msg instance
+		Message msg;
 
-		Message msg = new Message( (int) 2, String.valueOf(humidity) );
+		// Here we create the message.
+		if (humiditySensorId == 0) {
+			msg = new Message(2, String.valueOf(humidity));
+		} else {
+			msg = new Message(22, String.valueOf(humidity));
+		}
 
 		// Here we send the message to the message manager.
 
