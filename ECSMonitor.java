@@ -24,6 +24,8 @@
 ******************************************************************************************************************/
 import InstrumentationPackage.*;
 import MessagePackage.*;
+import java.util.*;
+import java.rmi.*;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -34,6 +36,7 @@ import java.util.Hashtable;
 
 class ECSMonitor extends Thread
 {
+	private String DEFAULTPORT = "1099";		// Default message manager port
 	private MessageManagerInterface em = null;	// Interface object to the message manager
 	private String MsgMgrIP = null;				// Message Manager IP address
 	private float TempRangeHigh = 100;			// These parameters signify the temperature and humidity ranges in terms
@@ -128,37 +131,28 @@ class ECSMonitor extends Thread
 	public ECSMonitor()
 	{
 		// message manager is on the local system
-
-		try
-		{
-			// Here we create an message manager interface object. This assumes
-			// that the message manager is on the local machine
-
-			em = new MessageManagerInterface();
-
-		}
-
-		catch (Exception e)
-		{
-			System.out.println("ECSMonitor::Error instantiating message manager interface: " + e);
-			Registered = false;
-
-		} // catch
-
+		newEM();
 	} //Constructor
 
 	public ECSMonitor( String MsgIpAddress )
 	{
 		// message manager is not on the local system
-
 		MsgMgrIP = MsgIpAddress;
+		newEM();
+	} // Constructor
 
+	//////////////////// REMARK: helpers for restarting message manager
+	public void newEM()
+	{
 		try
 		{
 			// Here we create an message manager interface object. This assumes
 			// that the message manager is NOT on the local machine
-
-			em = new MessageManagerInterface( MsgMgrIP );
+			if (MsgMgrIP == null) {
+				em = new MessageManagerInterface();
+			} else {
+				em = new MessageManagerInterface( MsgMgrIP );
+			}
 		}
 
 		catch (Exception e)
@@ -167,18 +161,41 @@ class ECSMonitor extends Thread
 			Registered = false;
 
 		} // catch
+	}
 
-	} // Constructor
+	public void restartMessageManager() {
+		mw.WriteMessage("restarting message manager ....");
+		ProcessBuilder pb = new ProcessBuilder("./MMStart.sh");
+		try {
+			Process p = pb.start();
+			Thread.sleep(6000);
+			newEM();
+		} catch (Exception e) {
+			mw.WriteMessage("Error restarting message manager::" + e);
+		}
+	}
+
+	public boolean accessMessageManager() throws Exception {
+		System.out.println("Accessing message manager ...");
+		String name;
+		if (MsgMgrIP == null) {
+			name = "MessageManager";
+		} else {
+			name = "//" + MsgMgrIP + ":" + DEFAULTPORT + "/MessageManager";
+		}
+		MessageManager mm = (MessageManager) Naming.lookup(name);
+		return mm.isAlive();
+	}
+	//////////////////// END OF REMARK
 
 	public void run()
 	{
-		Message Msg = null;				  // Message object
-		MessageQueue eq = null;			  // Message Queue
-		int MsgId = 0;					  // User specified message ID
-		float CurrentTemperature = 0;	  // Current temperature as reported by the temperature sensor
-		float CurrentHumidity= 0;		  // Current relative humidity as reported by the humidity sensor
-
-		int	Delay = 1000;				// The loop delay (1 second)
+		Message Msg = null;				// Message object
+		MessageQueue eq = null;			// Message Queue
+		int MsgId = 0;					// User specified message ID
+		float CurrentTemperature = 0;	// Current temperature as reported by the temperature sensor
+		float CurrentHumidity= 0;		// Current relative humidity as reported by the humidity sensor
+		int Delay = 1000;				// The loop delay (1 second)
 		boolean Done = false;			// Loop termination flag
 		boolean ON = true;				// Used to turn on heaters, chillers, humidifiers, and dehumidifiers
 		boolean OFF = false;			// Used to turn off heaters, chillers, humidifiers, and dehumidifiers
@@ -197,14 +214,14 @@ class ECSMonitor extends Thread
 
 			mw.WriteMessage( "Registered with the message manager." );
 
-	    	try
-	    	{
+			try
+			{
 				mw.WriteMessage("   Participant id: " + em.GetMyId() );
 				mw.WriteMessage("   Registration Time: " + em.GetRegistrationTime() );
 
 			} // try
 
-	    	catch (Exception e)
+			catch (Exception e)
 			{
 				System.out.println("Error:: " + e);
 
@@ -227,7 +244,15 @@ class ECSMonitor extends Thread
 				catch( Exception e )
 				{
 					mw.WriteMessage("Error getting message queue::" + e );
-
+					//// only when the message manager is unaccessible, we restart message manager
+					try {
+						accessMessageManager();
+					} catch(Exception accessException) {
+						mw.WriteMessage("Error: MessageManager unavailable. Restarting it.");
+						//////////////////// REMARK: restart message manager
+						restartMessageManager();
+						//////////////////// END OF REMARK
+					}
 				} // catch
 
 				// If there are messages in the queue, we read through them.

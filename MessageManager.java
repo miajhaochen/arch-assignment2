@@ -48,7 +48,9 @@ public class MessageManager extends UnicastRemoteObject implements RMIMessageMan
 			String MessageManagerIpAddress = LocalHostAddress.getHostAddress();
 
 			MessageManager em = new MessageManager();
-	      	Naming.bind("MessageManager", em);
+			//////////////////// REMARK: rebind message manager
+			Naming.rebind("MessageManager", em);
+			//////////////////// END OF REMARK
 
 	     	// Finally we notify the user that the server is ready.
 
@@ -77,6 +79,11 @@ public class MessageManager extends UnicastRemoteObject implements RMIMessageMan
 	* Exceptions: None
 	*
 	****************************************************************************/
+
+	public boolean isAlive() throws RemoteException {
+		System.out.println("Message manager is alive!");
+		return true;
+	}
 
 	synchronized public long Register() throws RemoteException
 	{
