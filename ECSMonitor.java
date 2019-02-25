@@ -25,6 +25,10 @@
 import InstrumentationPackage.*;
 import MessagePackage.*;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Hashtable;
 
@@ -384,8 +388,12 @@ class ECSMonitor extends Thread
 
 				} // catch
 
-				sensorHealthCheck();
-				controllerHealthCheck();
+				try {
+					sensorHealthCheck();
+					controllerHealthCheck();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
 
 			} // while
 
@@ -424,7 +432,7 @@ class ECSMonitor extends Thread
 	}
 
 
-	private void sensorHealthCheck() {
+	private void sensorHealthCheck() throws IOException {
 		StringBuilder sensorWarning = new StringBuilder();
 		// The logic to deal with loss of sensors
 		if (TemperatureUpdatedTime != 0 && System.currentTimeMillis() - TemperatureUpdatedTime > SensorAlertThreshold) {
@@ -439,11 +447,11 @@ class ECSMonitor extends Thread
 
 		if (sensorWarning.length() != 0) {
 			mw.WriteMessage(sensorWarning.toString());
-			writeToFile(sensorWarning.toString());
+			writeToFile(sensorWarning.toString(), true);
 		}
 	}
 
-	private void controllerHealthCheck() {
+	private void controllerHealthCheck() throws IOException {
 		StringBuilder controllerWarning = new StringBuilder();
 		// The logic to deal with loss of controllers
 		if (TemperatureConfirmedTime != 0 && System.currentTimeMillis() - TemperatureConfirmedTime > ControllerAlertThreshold) {
@@ -457,15 +465,28 @@ class ECSMonitor extends Thread
 		}
 		if (controllerWarning.length() != 0) {
 			mw.WriteMessage(controllerWarning.toString());
-			writeToFile(controllerWarning.toString());
+			writeToFile(controllerWarning.toString(), true);
 		}
 	}
 
 	/**
+	 * Create log file to record all the warning messages printed to console.
 	 * @param info
+	 * @param append true to append messages, false to overwrite
 	 */
-	private void writeToFile(String info) {
-		// Log into some files for auditing reasons
+	private void writeToFile(String info, boolean append) throws IOException {
+		BufferedWriter log = null;
+		try {
+			File file = new File("log.txt");
+			log = new BufferedWriter(new FileWriter(file));
+			log.write(info);
+		} catch ( IOException e ) {
+			e.printStackTrace();
+		} finally {
+			if ( log != null ) {
+				log.close();
+			}
+		}
 	}
 
 	/***************************************************************************
