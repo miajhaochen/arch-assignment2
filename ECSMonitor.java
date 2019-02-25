@@ -38,6 +38,17 @@ class ECSMonitor extends Thread
 	Indicator ti;								// Temperature indicator
 	Indicator hi;								// Humidity indicator
 
+	// The timestamp for detection sensor failures
+	private long TemperatureUpdatedTime = 0;   // The updated time point for temperature in millisecond
+	private long HumidityUpdatedTime = 0;      // The updated time point for humidity in millisecond
+	private long SensorAlertThreshold = 5000; // The sensor threshold in millisecond to trigger an alert (eg. 10s)
+
+	// The timestamp for detection controller failures
+	private long TemperatureConfirmedTime = 0;     // The updated time point for temperature controller in millisecond
+	private long HumidityConfirmedTime = 0;        // The updated time point for humidity controller in millisecond
+	private long ControllerAlertThreshold = 5000; // The controller threshold in millisecond to trigger an alert (eg. 10s)
+
+
 	public ECSMonitor()
 	{
 		// message manager is on the local system
@@ -90,11 +101,6 @@ class ECSMonitor extends Thread
 		int MsgId = 0;					  // User specified message ID
 		float CurrentTemperature = 0;	  // Current temperature as reported by the temperature sensor
 		float CurrentHumidity= 0;		  // Current relative humidity as reported by the humidity sensor
-
-		// The timestamp for detection sensor failures
-		long TemperatureUpdatedTime = 0;  // The updated time point for temperature in millisecond
-		long HumidityUpdatedTime = 0;     // The updated time point for humidity in millisecond
-		long AlertThreshold = 10000;      // The threshold in millisecond to trigger an alert (eg. 10s)
 
 		int	Delay = 1000;				// The loop delay (1 second)
 		boolean Done = false;			// Loop termination flag
@@ -196,6 +202,17 @@ class ECSMonitor extends Thread
 
 					} // if
 
+					if ( Msg.GetMessageId() == -5 ) // Temperature controller confirmation
+					{
+						TemperatureConfirmedTime = System.currentTimeMillis();
+
+					} // if
+
+					if ( Msg.GetMessageId() == -4 ) // Humidifier controller confirmation
+					{
+						HumidityConfirmedTime = System.currentTimeMillis();
+					} // if
+
 					// If the message ID == 99 then this is a signal that the simulation
 					// is to end. At this point, the loop termination flag is set to
 					// true and this process unregisters from the message manager.
@@ -291,34 +308,57 @@ class ECSMonitor extends Thread
 
 				} // catch
 
-				if (TemperatureUpdatedTime != 0 && System.currentTimeMillis() - TemperatureUpdatedTime > AlertThreshold) {
-					String tempWarning = "[Warning]We lose the temperature sensor and please check it.";
-					mw.WriteMessage(tempWarning);
-					writeToFile(tempWarning);
-				}
-
-				if (HumidityUpdatedTime != 0 && System.currentTimeMillis() - HumidityUpdatedTime > AlertThreshold) {
-					String humidiWarning = "[Warning]We lose the humidity sensor and please check it.";
-					mw.WriteMessage(humidiWarning);
-					writeToFile(humidiWarning);
-				}
+				sensorHealthCheck();
+				controllerHealthCheck();
 
 			} // while
 
 		} else {
-
 			System.out.println("Unable to register with the message manager.\n\n" );
 
 		} // if
 
 	} // main
 
+
+	private void sensorHealthCheck() {
+		StringBuilder sensorWarning = new StringBuilder();
+		// The logic to deal with loss of sensors
+		if (TemperatureUpdatedTime != 0 && System.currentTimeMillis() - TemperatureUpdatedTime > SensorAlertThreshold) {
+			sensorWarning.append("[Warning]Lost the temperature sensor!!!\n");
+		}
+
+		if (HumidityUpdatedTime != 0 && System.currentTimeMillis() - HumidityUpdatedTime > SensorAlertThreshold) {
+			sensorWarning.append("[Warning]Lost the humidity sensor!!!\n");
+		}
+
+		if (sensorWarning.length() != 0) {
+			mw.WriteMessage(sensorWarning.toString());
+			writeToFile(sensorWarning.toString());
+		}
+	}
+
+	private void controllerHealthCheck() {
+		StringBuilder controllerWarning = new StringBuilder();
+		// The logic to deal with loss of controllers
+		if (TemperatureConfirmedTime != 0 && System.currentTimeMillis() - TemperatureConfirmedTime > ControllerAlertThreshold) {
+			controllerWarning.append("[Warning]Lost the temperature controller!!!\n");
+		}
+
+		if (HumidityConfirmedTime != 0 && System.currentTimeMillis() - HumidityConfirmedTime > ControllerAlertThreshold) {
+			controllerWarning.append("[Warning]Lost the humidity controller!!!\n");
+		}
+		if (controllerWarning.length() != 0) {
+			mw.WriteMessage(controllerWarning.toString());
+			writeToFile(controllerWarning.toString());
+		}
+	}
+
 	/**
-	 * For Inno, write to file.
 	 * @param info
 	 */
 	private void writeToFile(String info) {
-
+		// Log into some files for auditing reasons
 	}
 
 	/***************************************************************************
