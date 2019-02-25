@@ -478,7 +478,7 @@ class ECSMonitor extends Thread
 		BufferedWriter log = null;
 		try {
 			File file = new File("log.txt");
-			log = new BufferedWriter(new FileWriter(file));
+			log = new BufferedWriter(new FileWriter(file, append));
 			log.write(info);
 		} catch ( IOException e ) {
 			e.printStackTrace();
