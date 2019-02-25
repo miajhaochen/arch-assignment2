@@ -166,35 +166,7 @@ class HumiditySensor
 				{
 					Msg = eq.GetMessage();
 
-					if ( humiditySensorId == 0 && Msg.GetMessageId() == -4 )
-					{
-						if (Msg.GetMessage().equalsIgnoreCase("H1")) // humidifier on
-						{
-							HumidifierState = true;
-
-						} // if
-
-						if (Msg.GetMessage().equalsIgnoreCase("H0")) // humidifier off
-						{
-							HumidifierState = false;
-
-						} // if
-
-						if (Msg.GetMessage().equalsIgnoreCase("D1")) // dehumidifier on
-						{
-							DehumidifierState = true;
-
-						} // if
-
-						if (Msg.GetMessage().equalsIgnoreCase("D0")) // dehumidifier off
-						{
-							DehumidifierState = false;
-
-						} // if
-
-					} // if
-
-					else if ( humiditySensorId == 1 && Msg.GetMessageId() == -44 )
+					if ( Msg.GetMessageId() == -4 || Msg.GetMessageId() == -44 )
 					{
 						if (Msg.GetMessage().equalsIgnoreCase("H1")) // humidifier on
 						{

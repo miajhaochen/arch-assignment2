@@ -152,7 +152,7 @@ class TemperatureController
 				{
 					Msg = eq.GetMessage();
 
-					if ( Msg.GetMessageId() == (5 + (50 * temperatureSensorID)))
+					if ( Msg.GetMessageId() == 5 || Msg.GetMessageId() == 55)
 					{
 						if (Msg.GetMessage().equalsIgnoreCase("H1")) // heater on
 						{
