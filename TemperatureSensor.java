@@ -165,7 +165,7 @@ class TemperatureSensor
 					Msg = eq.GetMessage();
 
 					// if the primary sensor is running
-					if ( tempSensorId == 0 && Msg.GetMessageId() == -5)
+					if ( Msg.GetMessageId() == -5 || Msg.GetMessageId() == -55)
 					{
 						if (Msg.GetMessage().equalsIgnoreCase("H1")) // heater on
 						{
@@ -191,35 +191,6 @@ class TemperatureSensor
 
 						} // if
 					}
-
-					// if the redundant sensor is running
-					if ( tempSensorId == 1 && Msg.GetMessageId() == -55)
-					{
-						if (Msg.GetMessage().equalsIgnoreCase("H1")) // heater on
-						{
-							HeaterState = true;
-
-						} // if
-
-						if (Msg.GetMessage().equalsIgnoreCase("H0")) // heater off
-						{
-							HeaterState = false;
-
-						} // if
-
-						if (Msg.GetMessage().equalsIgnoreCase("C1")) // chiller on
-						{
-							ChillerState = true;
-
-						} // if
-
-						if (Msg.GetMessage().equalsIgnoreCase("C0")) // chiller off
-						{
-							ChillerState = false;
-
-						} // if
-
-						} // if
 
 					// If the message ID == 99 then this is a signal that the simulation
 					// is to end. At this point, the loop termination flag is set to

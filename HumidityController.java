@@ -144,7 +144,7 @@ class HumidityController
 				{
 					Msg = eq.GetMessage();
 
-					if ( Msg.GetMessageId() == (4 + (40 * humiditySensorID)))
+					if ( Msg.GetMessageId() == 4 || Msg.GetMessageId() == 44 )
 					{
 						if (Msg.GetMessage().equalsIgnoreCase("H1")) // humidifier on
 						{
