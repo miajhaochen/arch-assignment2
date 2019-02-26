@@ -1,4 +1,17 @@
 # arch-assignment2
+
+This implementation is a proof of concept to illustrate recovery from certain component failures.
+
+## Assumptions
+
+We created the following assumptions to narrow our scope and efficiently using our resources in distinct separations of concerns.
+
+* Our system will only run on one local machine, where each sensor, controller, and message manager are running on the same machine. Distributed capabilities were not considered in our implementation as we wanted this to be a proof of concept, rather than product ready code.
+* Controller/Sensor failures require that the message manager is up and running.
+* Message manger failures require that the console is up and running.
+
+**Note** The system may have unexpected behavior if these assumptions are not met.
+
 ## How to run (on Mac OS)
 
 1. Compile the java files by running `javac *.java`
