@@ -1,8 +1,8 @@
 # arch-assignment2
 ## How to run (on Mac OS)
 
-1. Go to the source folder and compile the applications by typing: javac \*.java, before that make sure you: rm \*.class
-1. Open terminal and start ‘rmiregistry’ and wait for 10 seconds (this is to ensure that rmiregistry is set up for connections on slower machines)
-1. Open a new terminal window and start the message manager (java MessageManager)
-1. Open a new terminal window and run the environmental control system (./ECStart). This will run the redundancy sensors and controllers.
-1. Once the environmental control system starts, the system should be up and running, collecting, and displaying data.
+1. Compile the java files by running `javac *.java`
+2. Open terminal and start `rmiregistry` and wait for 10 seconds (**Note** This is a workaround to the original *EMStart.sh* script because some machines are unable to connect to rmiregistry using the script) 
+3. Open a new terminal window and start the message manager by running `java MessageManager`
+4. Open a new terminal window and run the environmental control system `./ECStart`. This will also run the redundancy sensors and controllers.
+5. Once the environmental control system starts, the system should be up and running, collecting, and displaying data.
